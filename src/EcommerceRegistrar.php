@@ -13,6 +13,31 @@ use Illuminate\Database\Eloquent\Model;
 
 class EcommerceRegistrar
 {
+    /**
+     * Markers used in the serialized cache payload for relation ID arrays.
+     * Deliberately NOT single a-z letters so they can never collide with
+     * column aliases (spatie uses 'r', which only works because its two
+     * alias ranges never reach that letter — with three models we can't
+     * make that guarantee, so we step outside the alphabet entirely).
+     */
+    private const RELATION_PLUS = '_p';
+
+    private const RELATION_VARIANTS = '_v';
+
+    /**
+     * Disjoint alias letter ranges — one per model family.
+     * Columns shared across models (id, name, slug, ...) are aliased once,
+     * on first sight, and reuse that letter everywhere. Each range only
+     * needs to cover the columns UNIQUE to that model. If a custom model
+     * exhausts its range, the raw column name is used as-is (safe: a real
+     * column name can't collide with a single letter).
+     */
+    private const ALIAS_RANGE_PRODUCT = ['a', 'h'];
+
+    private const ALIAS_RANGE_PLU = ['j', 'm'];
+
+    private const ALIAS_RANGE_VARIANT = ['n', 'u'];
+
     protected Repository $cache;
 
     protected CacheManager $cacheManager;
@@ -24,8 +49,6 @@ class EcommerceRegistrar
     protected string $productVariantClass;
 
     protected Collection|array|null $products = null;
-
-    public string $pivotGeolocation;
 
     public \DateInterval|int $cacheExpirationTime;
 
@@ -42,7 +65,7 @@ class EcommerceRegistrar
     private bool $isLoadingProducts = false;
 
     /**
-     * GeolocationRegistrar constructor.
+     * EcommerceRegistrar constructor.
      */
     public function __construct(CacheManager $cacheManager)
     {
@@ -64,15 +87,12 @@ class EcommerceRegistrar
 
         $this->cacheKey = config('ecommerce.cache.key');
 
-        $this->pivotGeolocation = config('ecommerce.column_names.geolocation_pivot_key')
-            ?: 'geolocation_id';
-
         $this->cache = $this->getCacheStoreFromConfig();
     }
 
     protected function getCacheStoreFromConfig(): Repository
     {
-        // the 'default' fallback here is from the geolocation.php config file,
+        // the 'default' fallback here is from the ecommerce.php config file,
         // where 'default' means to use config(cache.default)
         $cacheDriver = config('ecommerce.cache.store', 'default');
 
@@ -100,8 +120,8 @@ class EcommerceRegistrar
     }
 
     /**
-     * Clear already-loaded geolocations collection.
-     * This is only intended to be called by the GeolocationServiceProvider on boot,
+     * Clear the already-loaded products collection.
+     * This is only intended to be called by the EcommerceServiceProvider on boot,
      * so that long-running instances like Octane or Swoole don't keep old data in memory.
      */
     public function clearProductsCollection(): void
@@ -110,8 +130,8 @@ class EcommerceRegistrar
     }
 
     /**
-     * Load locations from cache
-     * And turns locations array into a \Illuminate\Database\Eloquent\Collection
+     * Load products from the cache (building it from the DB on a miss)
+     * and hydrate the payload into an Eloquent Collection.
      */
     private function loadProducts(int $retries = 0): void
     {
@@ -138,22 +158,26 @@ class EcommerceRegistrar
                 fn() => $this->getSerializedProductsForCache()
             );
 
+            // stored flipped: [letter => column]
             $this->alias = $this->products['alias'];
 
+            // ORDER MATTERS: plus must be hydrated before variants,
+            // because each variant re-attaches its own plus relation
+            // from the shared $cachedPlus pool.
             $this->hydratePlusCache();
 
             $this->hydrateProductVariantsCache();
 
             $this->products = $this->getHydratedProductCollection();
-
-            $this->cachedPlus = $this->cachedProductVariants = $this->alias = $this->except = [];
         } finally {
+            $this->cachedPlus = $this->cachedProductVariants = $this->alias = $this->except = [];
+
             $this->isLoadingProducts = false;
         }
     }
 
     /**
-     * Get the geolocations based on the passed params.
+     * Get the products based on the passed params.
      */
     public function getProducts(array $params = [], bool $onlyOne = false): Collection
     {
@@ -222,6 +246,7 @@ class EcommerceRegistrar
     {
         return $this->productClass;
     }
+
     public function getProductVariantClass(): string
     {
         return $this->productVariantClass;
@@ -237,15 +262,18 @@ class EcommerceRegistrar
         return $this->cache->getStore();
     }
 
-    protected function getProductsWithMultiple(string ...$relations): Collection
+    protected function getProductsWithRelations(): Collection
     {
         return $this->productClass::select()
-            ->with($relations)
+            ->with('plus', 'productVariants', 'productVariants.plus')
             ->get();
     }
 
     /**
-     * Changes array keys with alias
+     * Changes array keys with alias.
+     * During serialization $this->alias is [column => letter] so this shrinks keys;
+     * during hydration it holds the flipped map [letter => column] so the very
+     * same method expands them back.
      */
     private function aliasedArray($model): array
     {
@@ -256,22 +284,25 @@ class EcommerceRegistrar
     }
 
     /**
-     * Array for cache alias
+     * Assign alias letters for a model's columns from the given range.
+     * Columns already aliased (shared with another model) keep their letter.
+     * Excluded columns (timestamps etc.) are skipped up front so they don't
+     * waste letters from the range.
      */
-    private function aliasModelFields($newKeys = []): void
+    private function aliasModelFields(Model $model, array $span): void
     {
         $i = 0;
-        $a = ! count($this->alias) ? range('a', 'm') : range('n', 'z');
+        $letters = range($span[0], $span[1]);
 
-        $k = (object) $newKeys;
+        foreach (array_keys($model->getAttributes()) as $column) {
+            if (\in_array($column, $this->except, true)) {
+                continue;
+            }
 
-        foreach (array_keys($k->getAttributes()) as $v) {
-            if (! isset($this->alias[$v])) {
-                $this->alias[$v] = $a[$i++] ?? $v;
+            if (! isset($this->alias[$column])) {
+                $this->alias[$column] = $letters[$i++] ?? $column;
             }
         }
-
-        $this->alias = array_diff_key($this->alias, array_flip($this->except));
     }
 
     /*
@@ -282,21 +313,19 @@ class EcommerceRegistrar
         $this->except = config('ecommerce.cache.column_names_except', [
             'created_at',
             'updated_at',
-            'deleted_at'
+            'deleted_at',
         ]);
 
-        $products = $this->getProductsWithMultiple(
-            'plus',
-            'productVariants',
-            'productVariants.plus'
-        )->map(function ($product) {
-            if (!$this->alias) {
-                $this->aliasModelFields($product);
-            }
+        $products = $this->getProductsWithRelations()
+            ->map(function ($product) {
+                if (! $this->alias) {
+                    $this->aliasModelFields($product, self::ALIAS_RANGE_PRODUCT);
+                }
 
-            return $this->aliasedArray($product) +
-                $this->getSerializedPluRelation($product) + $this->getSerializedProductVariantRelation($product);
-        })->all();
+                return $this->aliasedArray($product)
+                    + $this->getSerializedPluRelation($product)
+                    + $this->getSerializedProductVariantRelation($product);
+            })->all();
 
         $plus = array_values($this->cachedPlus);
         $variants = array_values($this->cachedProductVariants);
@@ -311,12 +340,12 @@ class EcommerceRegistrar
         }
 
         if (! isset($this->alias['plus'])) {
-            $this->alias['plus'] = 'p';
-            $this->aliasModelFields($model->plus[0]);
+            $this->alias['plus'] = self::RELATION_PLUS;
+            $this->aliasModelFields($model->plus[0], self::ALIAS_RANGE_PLU);
         }
 
         return [
-            'p' => $model->plus->map(function ($plu) {
+            self::RELATION_PLUS => $model->plus->map(function ($plu) {
                 if (! isset($this->cachedPlus[$plu->getKey()])) {
                     $this->cachedPlus[$plu->getKey()] = $this->aliasedArray($plu);
                 }
@@ -326,23 +355,24 @@ class EcommerceRegistrar
         ];
     }
 
-    private function getSerializedProductVariantRelation(Model $product)
+    private function getSerializedProductVariantRelation(Model $product): array
     {
-        if (! $product->productVariant->count()) {
+        if (! $product->productVariants->count()) {
             return [];
         }
 
-        if (! isset($this->alias['productVariant'])) {
-            $this->alias['productVariant'] = 'v';
-            $this->aliasModelFields($product->productVariant[0]);
+        if (! isset($this->alias['productVariants'])) {
+            $this->alias['productVariants'] = self::RELATION_VARIANTS;
+            $this->aliasModelFields($product->productVariants[0], self::ALIAS_RANGE_VARIANT);
         }
 
         return [
-            'v' => $product->productVariant->map(function ($variant) {
+            self::RELATION_VARIANTS => $product->productVariants->map(function ($variant) {
                 $key = $variant->getKey();
 
                 if (! isset($this->cachedProductVariants[$key])) {
-                    $this->cachedProductVariants[$key] = $this->aliasedArray($variant) + $this->getSerializedPluRelation($variant);
+                    $this->cachedProductVariants[$key] = $this->aliasedArray($variant)
+                        + $this->getSerializedPluRelation($variant);
                 }
 
                 return $key;
@@ -356,21 +386,25 @@ class EcommerceRegistrar
 
         return Collection::make(array_map(
             fn($item) => (clone $productInstance)
-                ->setRawAttributes($this->aliasedArray(array_diff_key($item, ['p' => 0, 'v' => 0])), true)
-                ->setRelation('plus', $this->getHydratedPluCollection($item['p'] ?? []))
-                ->setRelation('productVariants', $this->getHydratedProductVariantCollection($item['v'] ?? [])),
+                ->setRawAttributes(
+                    $this->aliasedArray(array_diff_key($item, [self::RELATION_PLUS => 0, self::RELATION_VARIANTS => 0])),
+                    true
+                )
+                ->setRelation('plus', $this->getHydratedPluCollection($item[self::RELATION_PLUS] ?? []))
+                ->setRelation('productVariants', $this->getHydratedProductVariantCollection($item[self::RELATION_VARIANTS] ?? [])),
             $this->products['products']
         ));
     }
 
     private function hydratePlusCache(): void
     {
-        $plusInstance = (new ($this->getPluClass())())->newInstance([], true);
+        $pluInstance = (new ($this->getPluClass())())->newInstance([], true);
 
-        array_map(function ($item) use ($plusInstance) {
-            $plus = (clone $plusInstance)
+        array_map(function ($item) use ($pluInstance) {
+            $plu = (clone $pluInstance)
                 ->setRawAttributes($this->aliasedArray($item), true);
-            $this->cachedPlus[$plus->getKey()] = $plus;
+
+            $this->cachedPlus[$plu->getKey()] = $plu;
         }, $this->products['plus']);
 
         $this->products['plus'] = [];
@@ -382,13 +416,26 @@ class EcommerceRegistrar
 
         array_map(function ($item) use ($variantInstance) {
             $variant = (clone $variantInstance)
-                ->setRawAttributes($this->aliasedArray($item), true);
-            $this->cachedProductVariants[$variant->getKey()] = $variant;
-        }, $this->products['productVariants']);
+                ->setRawAttributes(
+                    $this->aliasedArray(array_diff_key($item, [self::RELATION_PLUS => 0])),
+                    true
+                )
+                ->setRelation('plus', $this->getHydratedPluCollection($item[self::RELATION_PLUS] ?? []));
 
-        $this->products['productVariants'] = [];
+            $this->cachedProductVariants[$variant->getKey()] = $variant;
+        }, $this->products['variants']);
+
+        $this->products['variants'] = [];
     }
 
+    /**
+     * Disjoint alias letter ranges — one per model family.
+     * Columns shared across models (id, name, slug, ...) are aliased once,
+     * on first sight, and reuse that letter everywhere. Each range only
+     * needs to cover the columns UNIQUE to that model. If a custom model
+     * exhausts its range, the raw column name is used as-is (safe: a real
+     * column name can't collide with a single letter).
+     */
     private function getHydratedPluCollection(array $plus): Collection
     {
         return Collection::make(array_values(

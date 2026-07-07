@@ -2,12 +2,15 @@
 
 namespace EQ\LaravelEcommerce;
 
+use EQ\LaravelEcommerce\Commands\CacheResetCommand;
 use EQ\LaravelEcommerce\Contracts\Plu as PluContract;
 use EQ\LaravelEcommerce\Contracts\Product as ProductContract;
 use EQ\LaravelEcommerce\Contracts\ProductVariant as ProductVariantContract;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Octane\Contracts\OperationTerminated;
 
 class EcommerceServiceProvider extends ServiceProvider
 {
@@ -17,6 +20,11 @@ class EcommerceServiceProvider extends ServiceProvider
             __DIR__ . '/../config/ecommerce.php',
             'ecommerce'
         );
+
+        // Container bindings belong in register(), not boot():
+        // anything resolving the registrar during another provider's
+        // register() phase must already get the singleton.
+        $this->app->singleton(EcommerceRegistrar::class);
     }
 
     public function boot()
@@ -27,11 +35,7 @@ class EcommerceServiceProvider extends ServiceProvider
 
         $this->registerModelBindings();
 
-        $this->app->singleton(EcommerceRegistrar::class);
-
-        // Load routes, migrations, or other resources if needed
-        // $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
-        // $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        $this->registerOctaneListener();
     }
 
     protected function offerPublishing(): void
@@ -49,8 +53,6 @@ class EcommerceServiceProvider extends ServiceProvider
             __DIR__ . '/../config/ecommerce.php' => config_path('ecommerce.php'),
         ], 'ecommerce-config');
 
-        // For now this is like this and we'll be proceeding to register the proper migrations...
-
         $this->publishes([
             __DIR__ . '/../database/migrations/create_products_table.php' => $this->getMigrationFileName('create_products_table.php'),
             __DIR__ . '/../database/migrations/create_orders_table.php' => $this->getMigrationFileName('create_orders_table.php'),
@@ -60,13 +62,13 @@ class EcommerceServiceProvider extends ServiceProvider
 
     protected function registerCommands(): void
     {
-        // $this->commands([]);
-        // 
-        // if (! $this->app->runningInConsole()) {
-        // return;
-        // }
-        // 
-        // $this->commands([]);
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->commands([
+            CacheResetCommand::class,
+        ]);
     }
 
     protected function registerModelBindings(): void
@@ -85,6 +87,29 @@ class EcommerceServiceProvider extends ServiceProvider
             ProductVariantContract::class,
             fn($app) => $app->make($app->config['ecommerce.models.product_variant'])
         );
+    }
+
+    /**
+     * On Octane/Swoole the registrar singleton outlives the request, so its
+     * in-memory $products collection would otherwise go stale: a flush from
+     * another worker (or another server) clears the shared cache store, but
+     * this worker would keep serving its hydrated copy forever.
+     * Clearing the collection after each operation forces the next request
+     * to re-read the cache store (cheap on a hit — no DB involved).
+     */
+    protected function registerOctaneListener(): void
+    {
+        if ($this->app->runningInConsole() || ! $this->app['config']->get('octane.listeners')) {
+            return;
+        }
+
+        if (! $this->app['config']->get('ecommerce.cache.register_octane_reset_listener')) {
+            return;
+        }
+
+        $this->app[Dispatcher::class]->listen(function (OperationTerminated $event) {
+            $event->sandbox()->make(EcommerceRegistrar::class)->clearProductsCollection();
+        });
     }
 
     /**
