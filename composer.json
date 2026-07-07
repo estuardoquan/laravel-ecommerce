@@ -1,0 +1,25 @@
+{
+    "name": "estuardoquan/laravel-ecommerce",
+    "require-dev": {
+        "orchestra/testbench": "^11.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "EQ\\LaravelEcommerce\\": "src/"
+        }
+    },
+	"autoload-dev": {
+		"psr-4": {
+			"EQ\\LaravelEcommerce\\Tests\\": "tests/"
+		}
+	},
+	"extra": {
+		"laravel": {
+			"providers": [
+				"EQ\\LaravelEcommerce\\Providers\\EcommerceServiceProvider"
+			],
+			"aliases": {}
+		}
+	},
+    "require": {}
+}
