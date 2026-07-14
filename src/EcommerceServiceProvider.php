@@ -35,7 +35,7 @@ class EcommerceServiceProvider extends ServiceProvider
 
         $this->registerModelBindings();
 
-        $this->registerOctaneListener();
+        // $this->registerOctaneListener();
     }
 
     protected function offerPublishing(): void
@@ -97,20 +97,20 @@ class EcommerceServiceProvider extends ServiceProvider
      * Clearing the collection after each operation forces the next request
      * to re-read the cache store (cheap on a hit — no DB involved).
      */
-    protected function registerOctaneListener(): void
-    {
-        if ($this->app->runningInConsole() || ! $this->app['config']->get('octane.listeners')) {
-            return;
-        }
+    // protected function registerOctaneListener(): void
+    // {
+    //     if ($this->app->runningInConsole() || ! $this->app['config']->get('octane.listeners')) {
+    //         return;
+    //     }
 
-        if (! $this->app['config']->get('ecommerce.cache.register_octane_reset_listener')) {
-            return;
-        }
+    //     if (! $this->app['config']->get('ecommerce.cache.register_octane_reset_listener')) {
+    //         return;
+    //     }
 
-        $this->app[Dispatcher::class]->listen(function (OperationTerminated $event) {
-            $event->sandbox()->make(EcommerceRegistrar::class)->clearProductsCollection();
-        });
-    }
+    //     $this->app[Dispatcher::class]->listen(function (OperationTerminated $event) {
+    //         $event->sandbox()->make(EcommerceRegistrar::class)->clearProductsCollection();
+    //     });
+    // }
 
     /**
      * Returns existing migration file if found, else uses the current timestamp.

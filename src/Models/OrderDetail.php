@@ -1,19 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace EQ\LaravelEcommerce\Models;
 
-use App\Traits\HasPlu;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use EQ\LaravelEcommerce\Traits\HasPlu;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderDetail extends Model
 {
-    /** @use HasFactory<\Database\Factories\OrderDetailsFactory> */
-    use HasFactory,
-        HasPlu,
-        HasUuids;
-
+    use HasPlu;
     /**
      * The attributes that are mass assignable.
      *

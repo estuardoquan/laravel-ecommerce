@@ -1,21 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace EQ\LaravelEcommerce\Models;
 
-use App\Traits\HasAddreses;
 use Carbon\Carbon;
 use DateTimeInterface;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProductsFactory> */
-    use HasAddreses,
-        HasFactory,
-        HasUuids;
-
     /**
      * The attributes that are mass assignable.
      *
@@ -54,14 +46,14 @@ class Order extends Model
         // return $date->format('Y-m-d');
     }
 
-    public function user()
-    {
-        return $this->belongsTo(
-            User::class,
-            'user_id',
-            'id',
-        );
-    }
+    // public function user()
+    // {
+    //     return $this->belongsTo(
+    //         User::class,
+    //         'user_id',
+    //         'id',
+    //     );
+    // }
 
     public function orderDetails()
     {
