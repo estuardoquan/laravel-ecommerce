@@ -2,7 +2,7 @@
 
 namespace EQ\LaravelEcommerce\Traits;
 
-use App\Models\Address;
+use EQ\LaravelEcommerce\Models\Address;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 trait HasAddreses
