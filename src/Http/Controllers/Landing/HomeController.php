@@ -2,9 +2,9 @@
 
 namespace EQ\LaravelEcommerce\Http\Controllers\Landing;
 
-use App\Http\Controllers\Controller;
-use App\Models\Department;
-use App\Models\Provider;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Models\Department;
+use EQ\LaravelEcommerce\Models\Provider;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;

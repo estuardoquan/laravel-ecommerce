@@ -2,9 +2,9 @@
 
 namespace EQ\LaravelEcommerce\Http\Controllers\Settings;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\AddressStoreRequest;
-use App\Models\Address;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Http\Requests\Settings\AddressStoreRequest;
+use EQ\LaravelEcommerce\Models\Address;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

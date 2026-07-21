@@ -3,8 +3,8 @@
 namespace EQ\LaravelEcommerce\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Http\Requests\Auth\LoginRequest;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;

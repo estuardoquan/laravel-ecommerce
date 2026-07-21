@@ -3,7 +3,7 @@
 namespace EQ\LaravelEcommerce\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
 use Illuminate\Http\Response;
 
 class AuthenticatedApiController extends Controller

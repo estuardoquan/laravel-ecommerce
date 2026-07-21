@@ -2,8 +2,8 @@
 
 namespace EQ\LaravelEcommerce\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

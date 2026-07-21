@@ -2,7 +2,7 @@
 
 namespace EQ\LaravelEcommerce\Http\Requests\Settings;
 
-use App\Models\User;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

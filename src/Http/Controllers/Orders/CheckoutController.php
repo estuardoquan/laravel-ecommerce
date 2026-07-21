@@ -2,11 +2,11 @@
 
 namespace EQ\LaravelEcommerce\Http\Controllers\Orders;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\AddressStoreRequest;
-use App\JsonApi\Proxies\ShopOrder;
-use App\Models\Address;
-use App\Models\Order;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Http\Requests\Settings\AddressStoreRequest;
+use EQ\LaravelEcommerce\JsonApi\Proxies\ShopOrder;
+use EQ\LaravelEcommerce\Models\Address;
+use EQ\LaravelEcommerce\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;

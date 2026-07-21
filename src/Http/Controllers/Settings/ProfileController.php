@@ -2,8 +2,8 @@
 
 namespace EQ\LaravelEcommerce\Http\Controllers\Settings;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileUpdateRequest;
+use EQ\LaravelEcommerce\Http\Controllers\Controller;
+use EQ\LaravelEcommerce\Http\Requests\Settings\ProfileUpdateRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
