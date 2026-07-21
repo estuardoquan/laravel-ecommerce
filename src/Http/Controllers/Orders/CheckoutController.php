@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Orders;
+namespace EQ\LaravelEcommerce\Http\Controllers\Orders;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\AddressStoreRequest;

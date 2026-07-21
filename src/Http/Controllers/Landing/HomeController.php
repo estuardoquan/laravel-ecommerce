@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Landing;
+namespace EQ\LaravelEcommerce\Http\Controllers\Landing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;

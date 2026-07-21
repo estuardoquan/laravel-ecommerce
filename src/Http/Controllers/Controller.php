@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace EQ\LaravelEcommerce\Http\Controllers;
 
 abstract class Controller
 {

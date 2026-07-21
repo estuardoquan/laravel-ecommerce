@@ -1,17 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace EQ\LaravelEcommerce\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    /** @use HasFactory<\Database\Factories\DepartmentsFactory> */
-    use HasFactory,
-        HasUuids;
-
     /**
      * The attributes that are mass assignable.
      *

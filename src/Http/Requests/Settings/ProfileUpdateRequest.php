@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Settings;
+namespace EQ\LaravelEcommerce\Http\Requests\Settings;
 
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;

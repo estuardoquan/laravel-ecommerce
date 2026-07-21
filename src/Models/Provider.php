@@ -1,19 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace EQ\LaravelEcommerce\Models;
 
-use App\Traits\HasFiles;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Provider extends Model
 {
-    /** @use HasFactory<\Database\Factories\DepartmentsFactory> */
-    use HasFiles,
-        HasFactory,
-        HasUuids;
-
     /**
      * The attributes that are mass assignable.
      *

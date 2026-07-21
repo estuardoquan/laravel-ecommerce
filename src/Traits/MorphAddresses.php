@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Traits;
+namespace EQ\LaravelEcommerce\Traits;
 
 use App\Models\Address;
 use Illuminate\Database\Eloquent\Relations\MorphMany;

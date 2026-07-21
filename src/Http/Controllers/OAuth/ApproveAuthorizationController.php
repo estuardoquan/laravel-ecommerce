@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\OAuth;
+namespace EQ\LaravelEcommerce\Http\Controllers\OAuth;
 
 use League\OAuth2\Server\AuthorizationServer;
-use Laravel\Passport\Http\Controllers\ApproveAuthorizationController as Base;
+use Laravel\Passport\Http\Controllers\ApproveAuthorizationController as PassportApproveAuthorizationController;
 use Psr\Http\Message\ResponseInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
-class ApproveAuthorizationController extends Base
+class ApproveAuthorizationController extends PassportApproveAuthorizationController
 {
     /**
      * Approve the authorization request.
